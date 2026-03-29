@@ -89,11 +89,12 @@ class Plugin(IPlugin):
             result["timestamp"] = datetime.now().isoformat()
         
         # 发布一个事件
-        await self._context.event_bus.publish({
-            "name": "plugin.hello_world.executed",
-            "payload": {"name": name},
-            "source": "hello-world"
-        })
+        from app.event_bus import Event
+        await self._context.event_bus.publish(Event(
+            name="plugin.hello_world.executed",
+            payload={"name": name},
+            source="hello-world"
+        ))
         
         return result
     

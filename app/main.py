@@ -77,6 +77,10 @@ class PlugVerseApp:
     
     def __init__(self):
         self.services: Dict[str, Any] = {}
+        # 这些会在初始化后设置
+        self.event_bus = None
+        self.config_center = None
+        self.permission_manager = None
     
     def register_service(self, name: str, service: Any):
         """注册服务"""
@@ -103,6 +107,9 @@ async def lifespan(app: FastAPI):
     permission_manager = PermissionManager()
     
     app_instance = PlugVerseApp()
+    app_instance.event_bus = event_bus
+    app_instance.config_center = config_center
+    app_instance.permission_manager = permission_manager
     app_instance.register_service("logger", LoggerService())
     app_instance.register_service("storage", StorageService())
     
