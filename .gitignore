@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 配置
+.env
+.env.local
+config/plugins/*.json
+
+# 日志
+logs/
+*.log
+
+# 数据
+data/
+*.db
+*.sqlite
+
+# 输出
+output/
+*.tmp
+
+# 测试
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# macOS
+.DS_Store
+
+# 插件（可选，如果要提交示例插件则注释掉）
+# plugins/*/
+# 保留 hello-world 示例插件
+!plugins/hello-world/

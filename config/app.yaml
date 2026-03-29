@@ -1,0 +1,29 @@
+# PlugVerse 平台配置
+
+app:
+  name: PlugVerse
+  version: 0.1.0
+  debug: true
+
+server:
+  host: 0.0.0.0
+  port: 8000
+  workers: 1
+
+plugins:
+  auto_load: true
+  dir: ./plugins
+  timeout: 30
+
+storage:
+  dir: ./output
+  max_size_mb: 1000
+
+logging:
+  level: INFO
+  format: "{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}"
+  file: ./logs/plugverse.log
+
+database:
+  type: sqlite
+  path: ./data/plugverse.db

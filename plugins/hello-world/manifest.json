@@ -1,0 +1,28 @@
+{
+  "id": "hello-world",
+  "name": "Hello World",
+  "version": "1.0.0",
+  "description": "一个示例插件，用于演示插件开发",
+  "author": "PlugVerse Team",
+  "type": "custom",
+  "icon": "👋",
+  "website": "https://github.com/your-org/plugverse",
+  "license": "MIT",
+  "requirements": {},
+  "permissions": [],
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "greeting": {
+        "type": "string",
+        "default": "Hello",
+        "description": "问候语"
+      },
+      "show_timestamp": {
+        "type": "boolean",
+        "default": true,
+        "description": "是否显示时间戳"
+      }
+    }
+  }
+}
