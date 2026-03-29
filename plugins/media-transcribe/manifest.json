@@ -1,0 +1,51 @@
+{
+  "id": "media-transcribe",
+  "name": "音视频转文字",
+  "version": "1.0.0",
+  "description": "使用 Faster-Whisper 将音视频文件转换为文字稿，支持多种格式和语言",
+  "author": "PlugVerse Team",
+  "type": "media_process",
+  "icon": "🎤",
+  "website": "https://github.com/quanliu1991/plugverse",
+  "license": "MIT",
+  "requirements": {
+    "faster-whisper": ">=0.10.0",
+    "ffmpeg-python": ">=0.2.0"
+  },
+  "permissions": [
+    "storage.read",
+    "storage.write",
+    "media.process"
+  ],
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "model_size": {
+        "type": "string",
+        "enum": ["tiny", "base", "small", "medium", "large"],
+        "default": "base",
+        "title": "模型大小",
+        "description": "模型越大准确率越高，速度越慢"
+      },
+      "language": {
+        "type": "string",
+        "default": "zh",
+        "title": "识别语言",
+        "description": "zh=中文，en=英文"
+      },
+      "output_format": {
+        "type": "string",
+        "enum": ["txt", "srt", "vtt", "json"],
+        "default": "txt",
+        "title": "输出格式"
+      },
+      "compute_type": {
+        "type": "string",
+        "enum": ["int8", "float16", "float32"],
+        "default": "int8",
+        "title": "计算类型"
+      }
+    },
+    "required": ["model_size", "language", "output_format"]
+  }
+}
