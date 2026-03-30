@@ -48,6 +48,9 @@ data/
 output/
 *.tmp
 
+# 本地测试数据（不提交；可用 scripts/download_youtube_testdata.sh 生成本地文件）
+testdata/
+
 # 测试
 .pytest_cache/
 .coverage

@@ -433,6 +433,22 @@ async def get_task_result(task_id: str):
 # 前端构建目录
 frontend_path = Path(__file__).parent.parent / "frontend" / "dist"
 
+def _frontend_missing_html() -> str:
+    """未构建 frontend/dist 时的说明页（dist 在 .gitignore 中，需本地 npm run build）。"""
+    return """<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"/><title>PlugVerse</title></head>
+<body style="font-family:system-ui,sans-serif;max-width:42rem;margin:2rem;line-height:1.6">
+<h1>PlugVerse — 前端未构建</h1>
+<p>后端从 <code>frontend/dist/</code> 提供页面，该目录由 Vite 生成，不在仓库中。</p>
+<p>请在项目根目录执行：</p>
+<pre style="background:#f4f4f5;padding:1rem;border-radius:8px">cd frontend
+npm ci
+npm run build</pre>
+<p>然后重启服务，再访问本页。开发调试可另开终端：<code>cd frontend && npm run dev</code>（默认 <a href="http://localhost:3000">localhost:3000</a>，已代理 /api 到后端）。</p>
+<p>API 文档：<a href="/docs">/docs</a></p>
+</body></html>"""
+
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
     """提供前端首页"""
@@ -440,7 +456,7 @@ async def serve_frontend():
     if frontend_index.exists():
         with open(frontend_index, "r", encoding="utf-8") as f:
             return f.read()
-    return HTMLResponse("<h1>PlugVerse - 前端页面未找到</h1>")
+    return HTMLResponse(_frontend_missing_html())
 
 @app.get("/{full_path:path}", response_class=HTMLResponse)
 async def serve_static_or_spa(full_path: str):

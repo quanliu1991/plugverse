@@ -6,7 +6,7 @@ Media Transcribe Plugin - 音视频转文字插件
 
 import asyncio
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from datetime import datetime
 
 from app.plugin_base import (
@@ -29,9 +29,12 @@ class Plugin(IPlugin):
             "model_size": "base",
             "language": "zh",
             "output_format": "txt",
-            "compute_type": "int8"
+            "compute_type": "int8",
+            # simplified：中文转写统一为简体；original：保留模型输出（常为繁体）
+            "chinese_script": "simplified",
         }
         self._model_loaded = False
+        self._opencc_t2s = None  # lazy OpenCC('t2s')
     
     @property
     def metadata(self) -> PluginMetadata:
@@ -47,7 +50,8 @@ class Plugin(IPlugin):
             license="MIT",
             requirements={
                 "faster-whisper": ">=0.10.0",
-                "ffmpeg-python": ">=0.2.0"
+                "ffmpeg-python": ">=0.2.0",
+                "opencc-python-reimplemented": ">=0.1.7",
             },
             permissions=["storage.read", "storage.write", "media.process"],
             config_schema={
@@ -65,7 +69,11 @@ class Plugin(IPlugin):
                     "compute_type": {
                         "type": "string",
                         "enum": ["int8", "float16", "float32"]
-                    }
+                    },
+                    "chinese_script": {
+                        "type": "string",
+                        "enum": ["simplified", "original"],
+                    },
                 }
             }
         )
@@ -109,7 +117,35 @@ class Plugin(IPlugin):
         except Exception as e:
             self._context.logger.error(f"模型加载失败：{e}")
             raise
-    
+
+    def _is_chinese_context(self, detected_language: Optional[str]) -> bool:
+        """按配置或检测结果判断是否按中文处理（简体转换）。"""
+        cfg = self._config.get("language") or "zh"
+        if cfg != "auto":
+            c = str(cfg).lower()
+            return c.startswith("zh") or c in ("yue", "nan")
+        if detected_language:
+            d = str(detected_language).lower()
+            return d.startswith("zh") or d in ("yue", "nan")
+        return False
+
+    def _normalize_segment_text(self, text: str, detected_language: Optional[str]) -> str:
+        """Whisper 中文输出常为繁体，可选转为简体。"""
+        if self._config.get("chinese_script", "simplified") != "simplified":
+            return text
+        if not self._is_chinese_context(detected_language):
+            return text
+        try:
+            from opencc import OpenCC
+        except ImportError:
+            self._context.logger.warning(
+                "opencc 未安装，无法输出简体字，请安装：pip install opencc-python-reimplemented"
+            )
+            return text
+        if self._opencc_t2s is None:
+            self._opencc_t2s = OpenCC("t2s")
+        return self._opencc_t2s.convert(text)
+
     async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """执行转写任务"""
         try:
@@ -145,12 +181,15 @@ class Plugin(IPlugin):
             full_text_parts = []
             
             for segment in segments:
+                line = self._normalize_segment_text(
+                    segment.text.strip(), info.language
+                )
                 text_segments.append({
                     "start": segment.start,
                     "end": segment.end,
-                    "text": segment.text.strip()
+                    "text": line,
                 })
-                full_text_parts.append(segment.text.strip())
+                full_text_parts.append(line)
             
             output_text = " ".join(full_text_parts)
             

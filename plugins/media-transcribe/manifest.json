@@ -44,6 +44,13 @@
         "enum": ["int8", "float16", "float32"],
         "default": "int8",
         "title": "计算类型"
+      },
+      "chinese_script": {
+        "type": "string",
+        "enum": ["simplified", "original"],
+        "default": "simplified",
+        "title": "中文字形",
+        "description": "simplified=统一转为简体；original=保留模型输出（多为繁体）"
       }
     },
     "required": ["model_size", "language", "output_format"]

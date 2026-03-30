@@ -5,3 +5,6 @@ faster-whisper>=0.10.0
 
 # FFmpeg Python 绑定（可选，用于音频预处理）
 ffmpeg-python>=0.2.0
+
+# 繁体转简体（Whisper 中文识别结果常为繁体字形）
+opencc-python-reimplemented>=0.1.7

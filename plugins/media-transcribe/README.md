@@ -71,6 +71,7 @@ print(result["text"])
 | language | string | zh | 识别语言：zh=中文，en=英文，auto=自动检测 |
 | output_format | string | txt | 输出格式：txt/srt/vtt/json |
 | compute_type | string | int8 | 计算类型：int8/float16/float32 |
+| chinese_script | string | simplified | 中文：`simplified` 繁转简（默认）；`original` 保留模型字形 |
 
 ## 模型大小对比
 
