@@ -4,8 +4,14 @@ PlugVerse 主应用入口
 FastAPI 应用初始化和路由注册。
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, HTMLResponse
+from pathlib import Path
+from datetime import datetime
+import shutil
+import uuid
 from contextlib import asynccontextmanager
 from typing import Dict, Any
 import asyncio
@@ -121,7 +127,7 @@ async def lifespan(app: FastAPI):
     )
     
     # 自动加载已安装的插件
-    await load_installed_plugins()
+    await load_installed_plugins(plugin_manager)
     
     logger.info("✅ PlugVerse 启动完成")
     
@@ -129,24 +135,24 @@ async def lifespan(app: FastAPI):
     
     # 关闭时
     logger.info("👋 PlugVerse 关闭中...")
-    await unload_all_plugins()
+    await unload_all_plugins(plugin_manager)
     logger.info("✅ PlugVerse 已关闭")
 
 
-async def load_installed_plugins():
+async def load_installed_plugins(pm: PluginManager):
     """加载所有已安装的插件"""
-    discovered = await plugin_manager.discover_plugins()
+    discovered = await pm.discover_plugins()
     
     for metadata in discovered:
         logger.info(f"加载插件：{metadata.id}")
-        await plugin_manager.load_plugin(metadata.id)
+        await pm.load_plugin(metadata.id)
 
 
-async def unload_all_plugins():
+async def unload_all_plugins(pm: PluginManager):
     """卸载所有插件"""
-    for plugin_id in list(plugin_manager._plugins.keys()):
+    for plugin_id in list(pm._plugins.keys()):
         logger.info(f"卸载插件：{plugin_id}")
-        await plugin_manager.unload_plugin(plugin_id)
+        await pm.unload_plugin(plugin_id)
 
 
 # ========== 创建 FastAPI 应用 ==========
@@ -169,23 +175,15 @@ app.add_middleware(
 
 # ========== API 路由 ==========
 
-@app.get("/")
-async def root():
-    """根路径"""
-    return {
-        "name": "PlugVerse",
-        "version": "0.1.0",
-        "description": "插件化客户平台",
-        "status": "running"
-    }
-
-
 @app.get("/health")
+@app.get("/api/health")
 async def health_check():
     """健康检查"""
+    from datetime import datetime
     return {
         "status": "healthy",
-        "timestamp": "2026-03-29T23:59:59Z"
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "version": "0.3.0"
     }
 
 
@@ -205,7 +203,8 @@ async def get_stats():
 @app.get("/api/plugins")
 async def list_plugins():
     """获取所有插件列表"""
-    return plugin_manager.list_plugins()
+    plugins = plugin_manager.list_plugins()
+    return {"plugins": plugins}
 
 
 @app.get("/api/plugins/{plugin_id}")
@@ -288,6 +287,181 @@ async def get_events(limit: int = 50):
     """获取事件历史"""
     events = event_bus.get_history(limit=limit)
     return {"events": [e.to_dict() for e in events]}
+
+
+# ========== 文件管理 API ==========
+
+@app.get("/api/files")
+async def list_files():
+    """获取文件列表"""
+    import os
+    upload_dir = Path("./output/uploads")
+    if not upload_dir.exists():
+        return {"files": []}
+    
+    files = []
+    for f in upload_dir.iterdir():
+        if f.is_file():
+            files.append({
+                "id": f.stem,
+                "name": f.name,
+                "size": f.stat().st_size,
+                "created_at": datetime.fromtimestamp(f.stat().st_ctime).isoformat()
+            })
+    return {"files": files}
+
+@app.get("/api/files/{file_id}")
+async def get_file(file_id: str):
+    """获取文件信息"""
+    upload_dir = Path("./output/uploads")
+    file_path = upload_dir / file_id
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="文件不存在")
+    
+    return {
+        "id": file_id,
+        "name": file_path.name,
+        "size": file_path.stat().st_size,
+        "path": str(file_path.absolute())
+    }
+
+@app.get("/api/files/{file_id}/download")
+async def download_file(file_id: str):
+    """下载文件"""
+    upload_dir = Path("./output/uploads")
+    file_path = upload_dir / file_id
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="文件不存在")
+    
+    return FileResponse(str(file_path))
+
+@app.delete("/api/files/{file_id}")
+async def delete_file(file_id: str):
+    """删除文件"""
+    upload_dir = Path("./output/uploads")
+    file_path = upload_dir / file_id
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="文件不存在")
+    
+    file_path.unlink()
+    return {"success": True, "message": "文件已删除"}
+
+
+@app.post("/api/files/upload")
+async def upload_file(file: UploadFile = File(...)):
+    """上传文件"""
+    try:
+        # 创建上传目录
+        upload_dir = Path("./output/uploads")
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 生成唯一文件名
+        file_id = str(uuid.uuid4())[:8]
+        file_ext = Path(file.filename).suffix
+        safe_filename = f"{file_id}{file_ext}"
+        file_path = upload_dir / safe_filename
+        
+        # 保存文件
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        return {
+            "success": True,
+            "file_path": str(file_path.absolute()),
+            "filename": file.filename,
+            "size": file.size
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"上传失败：{str(e)}")
+
+
+# ========== 任务管理 API ==========
+
+# 内存中的任务存储（简化版）
+_tasks_store: Dict[str, dict] = {}
+
+@app.get("/api/tasks")
+async def list_tasks():
+    """获取任务列表"""
+    return {"tasks": list(_tasks_store.values())}
+
+@app.get("/api/tasks/{task_id}")
+async def get_task(task_id: str):
+    """获取任务详情"""
+    if task_id not in _tasks_store:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    return _tasks_store[task_id]
+
+@app.post("/api/tasks")
+async def create_task(task_data: dict):
+    """创建任务"""
+    import uuid
+    from datetime import datetime
+    task_id = str(uuid.uuid4())[:8]
+    task = {
+        "id": task_id,
+        "name": task_data.get("name", "Unnamed Task"),
+        "plugin": task_data.get("plugin", ""),
+        "status": "pending",
+        "progress": 0,
+        "created_at": datetime.utcnow().isoformat(),
+        "result": None
+    }
+    _tasks_store[task_id] = task
+    return task
+
+@app.delete("/api/tasks/{task_id}")
+async def cancel_task(task_id: str):
+    """取消任务"""
+    if task_id not in _tasks_store:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    
+    _tasks_store[task_id]["status"] = "cancelled"
+    return {"success": True, "message": "任务已取消"}
+
+@app.get("/api/tasks/{task_id}/result")
+async def get_task_result(task_id: str):
+    """获取任务结果"""
+    if task_id not in _tasks_store:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    return _tasks_store[task_id].get("result")
+
+
+# ========== 静态文件服务 ==========
+
+# 前端构建目录
+frontend_path = Path(__file__).parent.parent / "frontend" / "dist"
+
+@app.get("/", response_class=HTMLResponse)
+async def serve_frontend():
+    """提供前端首页"""
+    frontend_index = frontend_path / "index.html"
+    if frontend_index.exists():
+        with open(frontend_index, "r", encoding="utf-8") as f:
+            return f.read()
+    return HTMLResponse("<h1>PlugVerse - 前端页面未找到</h1>")
+
+@app.get("/{full_path:path}", response_class=HTMLResponse)
+async def serve_static_or_spa(full_path: str):
+    """提供静态文件或 SPA 路由"""
+    # 跳过 API 路径
+    if full_path.startswith("api/") or full_path.startswith("docs"):
+        return
+    
+    # 尝试返回静态文件
+    file_path = frontend_path / full_path
+    if file_path.exists() and file_path.is_file():
+        from fastapi.responses import FileResponse
+        return FileResponse(str(file_path))
+    
+    # 否则返回 index.html（SPA 路由）
+    frontend_index = frontend_path / "index.html"
+    if frontend_index.exists():
+        with open(frontend_index, "r", encoding="utf-8") as f:
+            return f.read()
+    
+    return HTMLResponse("<h1>404 - Not Found</h1>", status_code=404)
 
 
 # ========== 启动命令 ==========

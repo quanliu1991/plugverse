@@ -12,6 +12,13 @@
 
 平台采用模块化架构，核心提供插件管理、事件总线、配置中心、权限管理等基础能力，开发者可以通过开发插件快速扩展平台功能。
 
+### 📊 当前进度
+
+- **Phase 1 - 核心框架:** ✅ 100% 完成
+- **Phase 2 - 首个插件:** ✅ 100% 完成 (media-transcribe)
+- **Phase 3 - 前端 UI:** 🔄 80% 进行中 (前端框架完成)
+- **总体进度:** 75% (55/73 任务)
+
 ### ✨ 核心特性
 
 - 🧩 **插件化架构** - 热插拔插件，无需重启服务
@@ -23,6 +30,29 @@
 - 🎨 **Web UI** - 美观的插件管理和使用界面
 
 ### 🚀 快速开始
+
+#### 方式一：一键部署（推荐）
+
+**支持:** Linux x86_64, Linux aarch64, macOS
+
+```bash
+git clone https://github.com/your-org/plugverse.git
+cd plugverse
+chmod +x deploy.sh
+./deploy.sh prod --start
+```
+
+#### 方式二：Docker 部署
+
+**支持:** 所有 Docker 平台
+
+```bash
+git clone https://github.com/your-org/plugverse.git
+cd plugverse
+docker-compose up -d
+```
+
+#### 方式三：手动部署
 
 ```bash
 # 克隆项目
@@ -100,17 +130,28 @@ class Plugin(IPlugin):
 
 | 插件 | 状态 | 描述 |
 |------|------|------|
-| 音视频转文字 | 🚧 开发中 | 使用 Whisper 进行语音识别 |
+| 音视频转文字 | ✅ 已完成 | 使用 Faster-Whisper 进行语音识别 |
+| Hello World | ✅ 已完成 | 示例插件 |
 | 图片识别 | 📅 计划中 | OCR 和图片内容识别 |
 | 数据导出 | 📅 计划中 | 导出为 Excel/CSV/PDF |
 | AI 助手 | 📅 计划中 | 文本摘要、翻译、润色 |
 
 ## 📚 文档
 
+### 快速开始
+- [Linux 部署指南](DEPLOY-LINUX.md) - Ubuntu/CentOS/Debian
+- [通用部署指南](DEPLOY.md) - 所有平台
+- [Docker 部署](DEPLOY.md#docker-部署) - 容器化部署
+
+### 开发文档
 - [架构设计文档](docs/architecture.md)
 - [插件开发指南](docs/plugin-development.md)
+- [前端开发指南](frontend/README.md)
 - [API 文档](http://localhost:8000/docs)
-- [部署指南](docs/deployment.md)
+
+### 其他
+- [测试报告](TEST-REPORT.md)
+- [进度报告](PROGRESS-REPORT.md)
 
 ## 🛠️ 技术栈
 

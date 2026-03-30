@@ -1,0 +1,23 @@
+[Unit]
+Description=PlugVerse Plugin Platform
+After=network.target
+
+[Service]
+Type=notify
+User=plugverse
+Group=plugverse
+WorkingDirectory=/opt/plugverse
+Environment="PATH=/opt/plugverse/venv/bin"
+ExecStart=/opt/plugverse/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=plugverse
+
+# 安全设置
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
